@@ -36,15 +36,15 @@
             this.buildBtn = new System.Windows.Forms.Button();
             this.treeOLV = new System.Windows.Forms.GroupBox();
             this.foldersTLV = new BrightIdeasSoftware.TreeListView();
-            this.folderOLVCol = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
-            this.filesOLVCol = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
-            this.sizeOLVCol = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.folderTLVCol = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.fileCountTLVCol = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.sizeTLVCol = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
-            this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.foldersCMS = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.foldersCMSCreate = new System.Windows.Forms.ToolStripMenuItem();
             this.foldersCMSDelete = new System.Windows.Forms.ToolStripMenuItem();
             this.foldersCMSRename = new System.Windows.Forms.ToolStripMenuItem();
+            this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.browseGB.SuspendLayout();
             this.treeOLV.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.foldersTLV)).BeginInit();
@@ -128,17 +128,17 @@
             // 
             // foldersTLV
             // 
-            this.foldersTLV.AllColumns.Add(this.folderOLVCol);
-            this.foldersTLV.AllColumns.Add(this.filesOLVCol);
-            this.foldersTLV.AllColumns.Add(this.sizeOLVCol);
+            this.foldersTLV.AllColumns.Add(this.folderTLVCol);
+            this.foldersTLV.AllColumns.Add(this.fileCountTLVCol);
+            this.foldersTLV.AllColumns.Add(this.sizeTLVCol);
             this.foldersTLV.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.foldersTLV.CellEditUseWholeCell = false;
             this.foldersTLV.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.folderOLVCol,
-            this.filesOLVCol,
-            this.sizeOLVCol});
+            this.folderTLVCol,
+            this.fileCountTLVCol,
+            this.sizeTLVCol});
             this.foldersTLV.Cursor = System.Windows.Forms.Cursors.Default;
             this.foldersTLV.FullRowSelect = true;
             this.foldersTLV.HighlightBackgroundColor = System.Drawing.Color.Empty;
@@ -153,26 +153,24 @@
             this.foldersTLV.VirtualMode = true;
             this.foldersTLV.CellRightClick += new System.EventHandler<BrightIdeasSoftware.CellRightClickEventArgs>(this.onFolderOLV_RightClick);
             // 
-            // folderOLVCol
+            // folderTLVCol
             // 
-            this.folderOLVCol.AspectName = "";
-            this.folderOLVCol.Groupable = false;
-            this.folderOLVCol.Hideable = false;
-            this.folderOLVCol.Text = "Folder";
-            this.folderOLVCol.Width = 422;
+            this.folderTLVCol.AspectName = "";
+            this.folderTLVCol.Groupable = false;
+            this.folderTLVCol.Hideable = false;
+            this.folderTLVCol.Text = "Folder";
+            this.folderTLVCol.Width = 422;
             // 
-            // filesOLVCol
+            // fileCountTLVCol
             // 
-            this.filesOLVCol.AspectName = "";
-            this.filesOLVCol.Groupable = false;
-            this.filesOLVCol.Text = "Files";
+            this.fileCountTLVCol.Groupable = false;
+            this.fileCountTLVCol.Text = "Files";
             // 
-            // sizeOLVCol
+            // sizeTLVCol
             // 
-            this.sizeOLVCol.AspectName = "";
-            this.sizeOLVCol.FillsFreeSpace = true;
-            this.sizeOLVCol.Groupable = false;
-            this.sizeOLVCol.Text = "Size";
+            this.sizeTLVCol.FillsFreeSpace = true;
+            this.sizeTLVCol.Groupable = false;
+            this.sizeTLVCol.Text = "Size";
             // 
             // statusStrip1
             // 
@@ -220,6 +218,12 @@
             this.foldersCMSRename.Text = "Rename";
             this.foldersCMSRename.Click += new System.EventHandler(this.foldersCMSRename_Click);
             // 
+            // toolStripStatusLabel1
+            // 
+            this.statusLabel.Name = "statusLabel";
+            this.statusLabel.Size = new System.Drawing.Size(66, 17);
+            this.statusLabel.Text = "Waiting for build...";
+            // 
             // MainView
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -254,14 +258,15 @@
         private System.Windows.Forms.Button buildBtn;
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;
-        private BrightIdeasSoftware.OLVColumn folderOLVCol;
-        private BrightIdeasSoftware.OLVColumn filesOLVCol;
-        private BrightIdeasSoftware.OLVColumn sizeOLVCol;
+        private BrightIdeasSoftware.OLVColumn folderTLVCol;
+        private BrightIdeasSoftware.OLVColumn fileCountTLVCol;
+        private BrightIdeasSoftware.OLVColumn sizeTLVCol;
         private System.Windows.Forms.ContextMenuStrip foldersCMS;
         private System.Windows.Forms.ToolStripMenuItem foldersCMSCreate;
         private System.Windows.Forms.ToolStripMenuItem foldersCMSDelete;
         private System.Windows.Forms.ToolStripMenuItem foldersCMSRename;
         private System.Windows.Forms.Button toListBtn;
+        private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
     }
 }
 

@@ -19,7 +19,7 @@ namespace DirectoryTree
         public DirectoryTree(string dirPath)
         {
             this.dirPath = dirPath;
-            this.rootNode = new Node(dirPath, true);
+            this.rootNode = new Node(dirPath, true, null);
         }
 
         /// <summary>
@@ -45,6 +45,8 @@ namespace DirectoryTree
                 Console.WriteLine("ERROR while processing directory \"" + this.dirPath + "\": \""
                     + exception.Message + "\"!");
             }
+
+            updateTreeInfo();
         }
 
         /// <summary>
@@ -61,7 +63,7 @@ namespace DirectoryTree
                     FileInfo fileInfo = info as FileInfo;
                     if (fileInfo != null)
                     {
-                        Node fileNode = new Node(fileInfo.FullName, false);
+                        Node fileNode = new Node(fileInfo.FullName, false, this.rootNode);
                         fileNode.Size = fileInfo.Length;
                         node.AddChild(fileNode);
                         continue;
@@ -70,7 +72,7 @@ namespace DirectoryTree
                     DirectoryInfo subDirInfo = info as DirectoryInfo;
                     if (dirInfo != null)
                     {
-                        Node dirNode = new Node(subDirInfo.FullName, true);
+                        Node dirNode = new Node(subDirInfo.FullName, true, this.rootNode);
                         node.AddChild(dirNode);
                         build(subDirInfo, ref dirNode);
                         continue;
@@ -92,21 +94,96 @@ namespace DirectoryTree
             }
         }
 
-        /// <summary>
-        /// Finds the file or directory by the given path.
-        /// </summary>
-        /// <param name="pathToFind">The given path.</param>
-        /// <returns></returns>
-        internal Node Find(string pathToFind)
+        internal void updateTreeInfo() 
         {
-            return find(pathToFind, this.rootNode, "");
+            setAccumulatedSizes(this.rootNode);
+            setFilesOnlyCount(this.rootNode);
         }
 
-        private Node find(string pathToFind, Node node, string pathSuffix)
+        private long setAccumulatedSizes(Node node)
+        {
+            // this node
+            long accSize = node.Size;
+
+            // check child nodes
+            if (node.IsDirectory && node.HasChildren())
+            {
+                foreach (Node child in node.Children)
+                {
+                    accSize += setAccumulatedSizes(child);
+                }
+            }
+
+            node.AccSize = accSize;
+            return accSize;
+        }
+        
+        private int setFilesOnlyCount(Node node)
+        {
+            // this node
+            int count = 0;
+
+            // check child nodes
+            if (node.IsDirectory && node.HasChildren())
+            {
+                foreach (Node child in node.Children)
+                {
+                    count += setFilesOnlyCount(child);
+                }
+            }
+            else
+            {
+                count++;
+            }
+
+            node.FilesOnlyCount = count;
+            return count;
+        }
+
+        /// <summary>
+        /// Removes the given list of file or folder paths from the directory tree.
+        /// </summary>
+        /// <param name="paths">The given list of paths to delete.</param>
+        /// <param name="byHalfName">Depicts if the given paths are in half name format.</param>
+        public void Remove(List<string> paths, bool byHalfName)
+        {
+            foreach (string path in paths)
+            {
+                Node node = find(path, this.rootNode, byHalfName);
+                if (node != null)
+                {
+                    Node parent = node.Parent;
+                    Node childToRemove = null;
+                    if (byHalfName)
+                    {
+                        childToRemove = parent.Children.SingleOrDefault(item => item.HalfName.Equals(path));
+                    }
+                    else
+                    {
+                        childToRemove = parent.Children.SingleOrDefault(item => item.FullName.Equals(path));
+                    }
+                    if (childToRemove != null)
+                    {
+                        parent.Children.Remove(childToRemove);
+                    }
+                }
+            }
+
+            updateTreeInfo();
+        }
+
+        /// <summary>
+        /// Helper method to recursively find the file or directory node with the given path.
+        /// </summary>
+        /// <param name="pathToFind">The given path.</param>
+        /// <param name="node">The root node to start from.</param>
+        /// <param name="byHalfName">Depicts if the given path is in half name format.</param>
+        /// <returns>The node to be found or <code>null</code> otherwise.</returns>
+        private Node find(string path, Node node, bool byHalfName)
         {
             // check this node
-            string curFullPath = pathSuffix + node.Name;
-            if (curFullPath.Equals(pathToFind))
+            string name = (byHalfName) ? node.HalfName : node.FullName;
+            if (name.Equals(path))
             {
                 return node;
             }
@@ -116,7 +193,7 @@ namespace DirectoryTree
             {
                 foreach (Node child in node.Children)
                 {
-                    Node result = find(pathToFind, child, curFullPath += @"\");
+                    Node result = find(path, child, byHalfName);
                     if (result != null) return result;
                 }
             }
@@ -188,19 +265,42 @@ namespace DirectoryTree
     internal class Node : IComparable
     {
         private string name;
+        private string halfName;
         private string fullName;
-        //private Node parent;
+        private Node parent;
         private bool isDirectory;
+        private int filesOnlyCount;
         private long size;
+        private long accSize;
         private SortedSet<Node> children;
 
-        internal Node(string fullName, bool isDirectory)
+        internal Node(string fullName, bool isDirectory, Node root)
         {
             this.fullName = fullName;
             this.name = Path.GetFileName(fullName);
+            this.halfName = getHalfName(fullName, root);
+            this.parent = null;
             this.isDirectory = isDirectory;
+            this.filesOnlyCount = 0;
             this.size = 0;
+            this.accSize = 0;
             this.children = new SortedSet<Node>();
+        }
+
+        private string getHalfName(string fullName, Node root)
+        {
+            if (root != null)
+            {
+                try
+                {
+                    return fullName.Substring(fullName.IndexOf(root.Name));
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    Console.WriteLine("Error occured while creating half name of \"" + fullName + "\".");
+                }
+            }
+            return this.name;
         }
 
         internal bool HasChildren()
@@ -210,13 +310,11 @@ namespace DirectoryTree
 
         internal void AddChild(Node node)
         {
-            this.children.Add(node);
-            //node.Parent = this;
-        }
-
-        internal int ChildCount()
-        {
-            return children.Count;
+            if (this.isDirectory)
+            {
+                this.children.Add(node);
+                node.Parent = this;
+            }
         }
 
         public int CompareTo(object obj)
@@ -243,17 +341,23 @@ namespace DirectoryTree
             set { this.name = value; }
         }
 
+        internal string HalfName
+        {
+            get { return this.halfName; }
+            set { this.halfName = value; }
+        }
+
         internal string FullName
         {
             get { return this.fullName; }
             set { this.fullName = value; }
         }
 
-        //internal Node Parent
-        //{
-        //    get { return this.parent; }
-        //    set { this.parent = value; }
-        //}
+        internal Node Parent
+        {
+            get { return this.parent; }
+            set { this.parent = value; }
+        }
 
         internal bool IsDirectory
         {
@@ -261,10 +365,22 @@ namespace DirectoryTree
             set { this.isDirectory = value; }
         }
 
+        internal int FilesOnlyCount
+        {
+            get { return this.filesOnlyCount; }
+            set { this.filesOnlyCount = value; }
+        }
+
         internal long Size
         {
             get { return this.size; }
             set { this.size = value; }
+        }
+
+        internal long AccSize
+        {
+            get { return this.accSize; }
+            set { this.accSize = value; }
         }
 
         internal SortedSet<Node> Children

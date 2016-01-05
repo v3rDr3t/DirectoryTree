@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -14,6 +15,9 @@ namespace DirectoryTree
 {
     public partial class MainView : Form
     {
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = CharSet.Auto)]
+        extern static bool DestroyIcon(IntPtr handle);
+
         private string dirPath = "";
         DirectoryTree dirTree;
         Stopwatch stopwatch;
@@ -42,7 +46,7 @@ namespace DirectoryTree
         private void setupTreeColumns()
         {
             // 'Folder' column
-            folderOLVCol.AspectGetter = delegate (object rowObject) {
+            this.folderTLVCol.AspectGetter = delegate (object rowObject) {
                 if (rowObject is Node)
                 {
                     return ((Node)rowObject).Name;
@@ -52,8 +56,30 @@ namespace DirectoryTree
                 }
             };
 
+            // 'FileCount' column
+            this.fileCountTLVCol.AspectGetter = delegate (object rowObject) {
+                return ((Node)rowObject).FilesOnlyCount;
+            };
+
+            // 'Size' column
+            this.sizeTLVCol.AspectGetter = delegate (object rowObject) {
+                return ((Node)rowObject).AccSize;
+            };
+            this.sizeTLVCol.AspectToStringConverter = delegate (object rowObject) {
+                long bytesToFormat = (long)rowObject;
+                string[] suffixes = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
+                if (bytesToFormat == 0)
+                {
+                    return "0 " + suffixes[0];
+                }
+                long bytes = Math.Abs(bytesToFormat);
+                int dimension = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
+                double fileSize = Math.Round(bytes / Math.Pow(1024, dimension), 2);
+                return (Math.Sign(bytesToFormat) * fileSize).ToString() + " " + suffixes[dimension];
+            };
+
             // icons
-            this.folderOLVCol.ImageGetter = delegate (object rowObject) {
+            this.folderTLVCol.ImageGetter = delegate (object rowObject) {
                 return getIconFor(((Node)rowObject).FullName);
             };
         }
@@ -61,25 +87,25 @@ namespace DirectoryTree
         private string getIconFor(string path)
         {
             // Set a default icon for the file.
-            Icon iconForFile = SystemIcons.WinLogo;
-            FileInfo file = new FileInfo(path);
-            string ext = Path.GetExtension(path);
-
-            // Check to see if the image collection contains an image
-            // for this extension, using the extension as a key.
+            string ext = "file";
+            Image img = Properties.Resources.file16;
+            FileAttributes attr = File.GetAttributes(path);
+            if (attr.HasFlag(FileAttributes.Directory))
+            {
+                ext = "folder";
+                img = Properties.Resources.folder16;
+            }
+            // check to see if the image collection contains an image for this extension, using the extension as a key
             if (!this.foldersTLV.SmallImageList.Images.ContainsKey(ext))
             {
-                // If not, add the image to the image list.
-                //try
-                //{
-                //    // TODO: Get Icon
-                //    this.foldersTLV.SmallImageList.Images.Add(ext, iconForFile);
-                //}
-                //catch (Exception)
-                //{
-                //    Console.WriteLine("Error for: " + path);
-
-                //}
+                try
+                {
+                    this.foldersTLV.SmallImageList.Images.Add(ext, img);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
             }
             return ext;
         }
@@ -113,14 +139,21 @@ namespace DirectoryTree
 
         private void onBuildBtn_Click(object sender, EventArgs e)
         {
-            this.dirTree = new DirectoryTree(this.dirPath);
-            this.statusLabel.Text = "Building...";
-            stopwatch.Start();
-            dirTree.Build();
-            stopwatch.Stop();
-            this.statusLabel.Text = "Build time: " + formatMS(stopwatch.ElapsedMilliseconds);
+            if (Directory.Exists(this.dirPath))
+            {
+                this.dirTree = new DirectoryTree(this.dirPath);
+                this.statusLabel.Text = "Building...";
+                stopwatch.Start();
+                dirTree.Build();
+                stopwatch.Stop();
+                this.statusLabel.Text = "Build time: " + formatMS(stopwatch.ElapsedMilliseconds);
+                this.foldersTLV.Roots = new List<Node>() { this.dirTree.RootNode };
+            }
+            else
+            {
+                this.foldersTLV.Roots = null;
+            }
             
-            this.foldersTLV.Roots = new List<Node>() { this.dirTree.RootNode };
             this.toListBtn.Enabled = true;
 
         }
@@ -148,16 +181,18 @@ namespace DirectoryTree
 
         private void onFolderOLV_RightClick(object sender, BrightIdeasSoftware.CellRightClickEventArgs e)
         {
-            if (!foldersTLV.VirtualMode)
+            // default enability
+            this.foldersCMSCreate.Enabled = true;
+            this.foldersCMSDelete.Enabled = true;
+            this.foldersCMSRename.Enabled = true;
+
+            // only show context menu if any items are selected
+            if (foldersTLV.SelectedObjects.Count > 0)
             {
-                if (foldersTLV.SelectedItems.Count > 0)
+                // show reduced context menu if multiple items are selected
+                if (foldersTLV.SelectedObjects.Count > 1)
                 {
-                    this.foldersCMSDelete.Enabled = true;
-                    this.foldersCMSRename.Enabled = true;
-                }
-                else
-                {
-                    this.foldersCMSDelete.Enabled = false;
+                    this.foldersCMSCreate.Enabled = false;
                     this.foldersCMSRename.Enabled = false;
                 }
                 e.MenuStrip = this.foldersCMS;
@@ -166,32 +201,82 @@ namespace DirectoryTree
 
         private void foldersCMSCreate_Click(object sender, EventArgs e)
         {
-            // TODO: Implement
+            this.statusLabel.Text = "Creating...";
+            stopwatch.Start();
+
+            if (foldersTLV.SelectedIndices.Count == 1)
+            {
+                Node selectedNode = (Node)foldersTLV.SelectedObject;
+                string dirPath = selectedNode.FullName;
+                FileAttributes attr = File.GetAttributes(dirPath);
+
+                // get parenting directory path to create in
+                if (!attr.HasFlag(FileAttributes.Directory))
+                {
+                    dirPath = selectedNode.Parent.FullName;
+                }
+
+                // TODO: Implement (dialog: create file or folder with name @ dirPath)
+                // TODO: Implement (create new node in directory tree)
+            }
+
+            stopwatch.Stop();
+            this.statusLabel.Text = "Create time: " + formatMS(stopwatch.ElapsedMilliseconds);
+
+            updateFoldersView();
         }
 
         private void foldersCMSDelete_Click(object sender, EventArgs e)
         {
-            // TODO: Implement
+            this.statusLabel.Text = "Deleting...";
+            stopwatch.Start();
+
+            if (foldersTLV.SelectedIndices.Count > 0)
+            {
+                // convert to list of paths
+                List<string> paths = new List<string>(foldersTLV.SelectedObjects.Count);
+                foreach (var selectedObj in foldersTLV.SelectedObjects)
+                {
+                    paths.Add(((Node)selectedObj).HalfName);
+                }
+                dirTree.Remove(paths, true);
+            }
+
+            stopwatch.Stop();
+            this.statusLabel.Text = "Delete time: " + formatMS(stopwatch.ElapsedMilliseconds);
+
+            updateFoldersView();
         }
 
         private void foldersCMSRename_Click(object sender, EventArgs e)
         {
-            // TODO: Implement
+            this.statusLabel.Text = "Renaming...";
+            stopwatch.Start();
+
+            if (foldersTLV.SelectedIndices.Count == 1)
+            {
+                Node selectedNode = (Node)foldersTLV.SelectedObject;
+                string nodeName = selectedNode.Name;
+
+                // TODO: Implement (dialog: enter new name for nodeName)
+                // TODO: Implement (change node in directory tree)
+            }
+
+            stopwatch.Stop();
+            this.statusLabel.Text = "Rename time: " + formatMS(stopwatch.ElapsedMilliseconds);
+
+            updateFoldersView();
         }
 
-        private void filesCMSCreate_Click(object sender, EventArgs e)
+        private void updateFoldersView()
         {
-            // TODO: Implement
-        }
+            foreach (var root in this.foldersTLV.Roots)
+            {
+                this.foldersTLV.RefreshObject(root);
+            }
 
-        private void filesCMSDelete_Click(object sender, EventArgs e)
-        {
-            // TODO: Implement
-        }
-
-        private void filesCMSRename_Click(object sender, EventArgs e)
-        {
-            // TODO: Implement
+            // avoid random selection
+            this.foldersTLV.SelectedObject = null;
         }
     }
 }
