@@ -58,15 +58,17 @@ namespace DirectoryTree
 
             // 'FileCount' column
             this.fileCountTLVCol.AspectGetter = delegate (object rowObject) {
-                return ((Node)rowObject).FilesOnlyCount;
+                Node node = (Node)rowObject;
+                return (node.IsDirectory) ? node.FilesOnlyCount.ToString() : "";
             };
 
             // 'Size' column
             this.sizeTLVCol.AspectGetter = delegate (object rowObject) {
                 return ((Node)rowObject).AccSize;
             };
-            this.sizeTLVCol.AspectToStringConverter = delegate (object rowObject) {
-                long bytesToFormat = (long)rowObject;
+
+            this.sizeTLVCol.AspectToStringConverter = delegate (object cellValue) {
+                long bytesToFormat = (long)cellValue;
                 string[] suffixes = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
                 if (bytesToFormat == 0)
                 {
