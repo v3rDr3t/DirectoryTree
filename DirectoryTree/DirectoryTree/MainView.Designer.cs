@@ -40,11 +40,11 @@
             this.fileCountTLVCol = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
             this.sizeTLVCol = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
+            this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.foldersCMS = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.foldersCMSCreate = new System.Windows.Forms.ToolStripMenuItem();
             this.foldersCMSDelete = new System.Windows.Forms.ToolStripMenuItem();
             this.foldersCMSRename = new System.Windows.Forms.ToolStripMenuItem();
-            this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.browseGB.SuspendLayout();
             this.treeOLV.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.foldersTLV)).BeginInit();
@@ -217,12 +217,6 @@
             this.foldersCMSRename.Size = new System.Drawing.Size(117, 22);
             this.foldersCMSRename.Text = "Rename";
             this.foldersCMSRename.Click += new System.EventHandler(this.foldersCMSRename_Click);
-            // 
-            // toolStripStatusLabel1
-            // 
-            this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new System.Drawing.Size(66, 17);
-            this.statusLabel.Text = "Waiting for build...";
             // 
             // MainView
             // 

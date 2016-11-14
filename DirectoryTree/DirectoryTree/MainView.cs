@@ -21,6 +21,7 @@ namespace DirectoryTree
         private string dirPath = "";
         DirectoryTree dirTree;
         Stopwatch stopwatch;
+        bool defaultIcons = false;
 
         public MainView()
         {
@@ -30,86 +31,6 @@ namespace DirectoryTree
             // setup folder tree
             setupTreeList();
             setupTreeColumns();
-        }
-
-        private void setupTreeList()
-        {
-            this.foldersTLV.CanExpandGetter = delegate (object x) {
-                return ((Node)x).HasChildren();
-            };
-
-            this.foldersTLV.ChildrenGetter = delegate (object x) {
-                return ((Node)x).Children;
-            };
-        }
-        
-        private void setupTreeColumns()
-        {
-            // 'Folder' column
-            this.folderTLVCol.AspectGetter = delegate (object rowObject) {
-                if (rowObject is Node)
-                {
-                    return ((Node)rowObject).Name;
-                }
-                else {
-                    return "";
-                }
-            };
-
-            // 'FileCount' column
-            this.fileCountTLVCol.AspectGetter = delegate (object rowObject) {
-                Node node = (Node)rowObject;
-                return (node.IsDirectory) ? node.FilesOnlyCount.ToString() : "";
-            };
-
-            // 'Size' column
-            this.sizeTLVCol.AspectGetter = delegate (object rowObject) {
-                return ((Node)rowObject).AccSize;
-            };
-
-            this.sizeTLVCol.AspectToStringConverter = delegate (object cellValue) {
-                long bytesToFormat = (long)cellValue;
-                string[] suffixes = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
-                if (bytesToFormat == 0)
-                {
-                    return "0 " + suffixes[0];
-                }
-                long bytes = Math.Abs(bytesToFormat);
-                int dimension = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
-                double fileSize = Math.Round(bytes / Math.Pow(1024, dimension), 2);
-                return (Math.Sign(bytesToFormat) * fileSize).ToString() + " " + suffixes[dimension];
-            };
-
-            // icons
-            this.folderTLVCol.ImageGetter = delegate (object rowObject) {
-                return getIconFor(((Node)rowObject).FullName);
-            };
-        }
-
-        private string getIconFor(string path)
-        {
-            // Set a default icon for the file.
-            string ext = "file";
-            Image img = Properties.Resources.file16;
-            FileAttributes attr = File.GetAttributes(path);
-            if (attr.HasFlag(FileAttributes.Directory))
-            {
-                ext = "folder";
-                img = Properties.Resources.folder16;
-            }
-            // check to see if the image collection contains an image for this extension, using the extension as a key
-            if (!this.foldersTLV.SmallImageList.Images.ContainsKey(ext))
-            {
-                try
-                {
-                    this.foldersTLV.SmallImageList.Images.Add(ext, img);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-            }
-            return ext;
         }
 
         private void onBrowseTB_KeyPress(object sender, KeyPressEventArgs e)
@@ -166,7 +87,10 @@ namespace DirectoryTree
             {
                 this.statusLabel.Text = "Convertring directory tree to list...";
                 stopwatch.Restart();
-                dirTree.ToList();
+                List<string> list = dirTree.ToList().ToList();
+                foreach (string item in list) {
+                    Console.WriteLine(item);
+                }
                 stopwatch.Stop();
                 this.statusLabel.Text = "ToList time: " + formatMS(stopwatch.ElapsedMilliseconds);
             }

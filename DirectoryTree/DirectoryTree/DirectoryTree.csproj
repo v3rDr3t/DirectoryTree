@@ -52,6 +52,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DirectoryTree.cs" />
+    <Compile Include="IconTools.cs" />
+    <Compile Include="MainView.ControlSetup.cs">
+      <DependentUpon>MainView.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MainView.cs">
       <SubType>Form</SubType>
     </Compile>
